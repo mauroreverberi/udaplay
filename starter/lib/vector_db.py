@@ -135,7 +135,7 @@ class VectorStore:
             ids=ids,
             where=where,
             limit=limit,
-            include=['documents', 'distances', 'metadatas']
+            include=['documents', 'metadatas'] # distances is not valid for .get(), removed
         )
 
 class VectorStoreManager:
@@ -154,13 +154,32 @@ class VectorStoreManager:
     - Store lifecycle management (create, get, delete)
     """
 
-    def __init__(self, openai_api_key: str):
-        self.chroma_client = chromadb.Client()
-        self.embedding_function = self._create_embedding_function(openai_api_key)
+    def __init__(
+            self,
+            openai_api_key: str,
+            persist_path: Optional[str] = None,
+            embedding_model: str = "text-embedding-3-small",
+            openai_base_url: Optional[str] = "https://openai.vocareum.com/v1"
+    ):
+        # If persist_path is provided, use ChromaDB's PersistentClient
+        if persist_path:
+            self.chroma_client = chromadb.PersistentClient(path=persist_path)
+        else:
+            self.chroma_client = chromadb.Client()
 
-    def _create_embedding_function(self, api_key: str) -> EmbeddingFunction:
+
+        self.embedding_function = self._create_embedding_function(openai_api_key, embedding_model, openai_base_url)
+
+    def _create_embedding_function(
+            self,
+            api_key: str,
+            model_name: str = "text-embedding-3-small",
+            api_base: Optional[str] = None
+                                   ) -> EmbeddingFunction:
         embeddings_fn = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=api_key
+            api_key=api_key,
+            model_name=model_name,
+            api_base=api_base
         )
         return embeddings_fn
 
